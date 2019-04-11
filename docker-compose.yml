@@ -1,0 +1,100 @@
+version: '3.3'
+services:
+  project-backend:
+    image:
+    ports:
+      - '18000:8000'
+    depends_on:
+      - project-mongo
+    links:
+      - project-mongo
+    environment:
+      FILES_UPLOAD_DIR: /project-files
+      MONGO_HOST: project-mongo
+      AUTH_SERVER_URL: http://project-login:8080
+      SELENIUM_HUB_URL: http://project-selenium-hub:4444/wd/hub
+      SPRING_MAIL_HOST: project-inbucket
+      SPRING_MAIL_PORT: 2500
+      QUICK_SETUP_BASE_URL: http://54.37.78.210:58080
+      LOGIN_BASE_URL: http://54.37.78.210:28080
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    volumes:
+      - './files/:/statuspage-files'
+
+  project-inbucket:
+    image: jhillyerd/inbucket:stable
+    ports:
+      - '9000:9000'
+
+  project-frontend:
+    image:
+    depends_on:
+      - project-backend
+    restart: always
+    environment:
+      BACKEND_API: http://project-backend:8080
+      JAVA_OPTS: "-Xms200m -Xmx200m"
+
+  project-login:
+    ports:
+      - '28000:8000'
+    depends_on:
+      - project-mongo
+    links:
+      - project-mongo
+    environment:
+      MONGO_HOST: project-mongo
+      JAVA_OPTS: "-Xms200m -Xmx200m"
+
+  project-mongo:
+    image: mvertes/alpine-mongo:3.4.9-0
+    ports:
+      - '27018:27017'
+    volumes:
+      - "./db/:/data/db"
+
+  project-web-ui:
+    ports:
+      - '18080:18080'
+    depends_on:
+      - project-backend
+    volumes:
+      - ./proxy/conf.d:/etc/nginx/conf.d
+    restart: always
+    environment:
+      - DEPLOY_ENV
+
+  project-quicksetup:
+    ports:
+      - '58080:58080'
+    volumes:
+      - ./proxy-quicksetup/conf.d:/etc/nginx/conf.d
+    restart: always
+    environment:
+      - DEPLOY_ENV
+
+  project-login-web-ui:
+    ports:
+      - '28080:28080'
+    depends_on:
+      - project-backend
+    volumes:
+      - ./proxy-login/conf.d:/etc/nginx/conf.d
+    restart: always
+    environment:
+      - DEPLOY_ENV
+
+  project-selenium-hub:
+    image: selenium/hub:3.141.59-copernicium
+    ports:
+      - "4444:4444"
+
+  project-node-chrome:
+    image: selenium/node-chrome:3.141.59-dubnium
+    volumes:
+      - /dev/shm:/dev/shm
+    depends_on:
+      - statuspage-selenium-hub
+    environment:
+      - HUB_HOST=project-selenium-hub
+      - HUB_PORT=4444

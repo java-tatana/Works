@@ -1,0 +1,11 @@
+FROM openjdk:8-jre-alpine
+
+
+EXPOSE 8080
+EXPOSE 8000
+
+COPY target/project-backend.jar /project-backend.jar
+COPY src/main/scripts/entrypoint.sh /entrypoint.sh
+
+CMD ["/entrypoint.sh"]
+HEALTHCHECK CMD ps aux | grep java || exitcd 1
